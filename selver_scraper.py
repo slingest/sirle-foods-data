@@ -82,24 +82,22 @@ def get_contents(soup):
             content = item.find("div", {"class": "AttributeAccordion__content"}).text
             return content.replace("* Toote koostisosade loetelu võib muutuda. Kontrollige enne toote tarbimist pakendil esitatud koostisosi.", "").strip()
 
-def get_page_soup(url, wait_for_selector, query_params=None):
-    full_url = None
-
-    if query_params:
-        param_string = "&".join([f"{k}={v}" for k, v in query_params.items()])
-        full_url = f"{url}?{param_string}"
-    else:
-        full_url = url
-
+def get_page_soup(url, element, params=None):
+    global driver
+    full_url = BASE_URL + url
     driver.get(full_url)
-
+    time.sleep(3)
+    
+    # Nõustume küpsistega
     try:
-        element = EC.presence_of_element_located((By.CSS_SELECTOR, wait_for_selector))
-        WebDriverWait(driver, PAGE_LOAD_DELAY).until(element)
-        sleep(PAGE_SWITCH_SLEEP)
-        return BeautifulSoup(driver.page_source, "html.parser")
-    except TimeoutException as e:
-        raise e
+        cookie_btn = driver.find_element(By.CSS_SELECTOR, '#cookie-accept, button:has-text("Nõustun")')
+        if cookie_btn: cookie_btn.click()
+    except Exception:
+        pass
+
+    driver.execute_script("window.scrollBy(0, 1000);")
+    time.sleep(1)
+    return BeautifulSoup(driver.page_source, "html.parser")
 
 def insert_product_to_database(url, title, barcode, image, contents, price):
     db_util.insert_product(url, title, barcode, image, contents, price, "SELVER")
