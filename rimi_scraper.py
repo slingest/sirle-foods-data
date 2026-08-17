@@ -37,14 +37,13 @@ def close_browser():
     if driver:
         driver.quit()
 
-# PARANDATUD HINNA PUHASTAJA (Ei jookse 'per tk' peale kokku!)
+# PUHASTAB HINNA JA HOIAB ÄRA 'per tk' VEA
 def get_price(euros, cents):
     try:
         full_text = f"{euros}.{cents}"
         match = re.search(r'(\d+)[\.,](\d{2})', full_text)
         if match:
             return float(f"{match.group(1)}.{match.group(2)}")
-        
         nums = re.findall(r'\d+', full_text)
         if len(nums) >= 2:
             return float(f"{nums[0]}.{nums[1]}")
@@ -60,15 +59,15 @@ def has_next_products_page(soup):
 
 def get_product_links_with_prices(soup):
     result = {}
-    for item in soup.select("div.product-grid__item, li.product-grid__item"):
+    for item in soup.select("div.product-grid__item, li.product-grid__item, div.card"):
         try:
             link_tag = item.select_one("a.product-card__full-link, a.card__url, a")
             if not link_tag or 'href' not in link_tag.attrs:
                 continue
             link = link_tag.get("href")
 
-            euros_el = item.select_one("span.price-tag > span, .price-tag span")
-            cents_el = item.select_one("span.price-tag > div > sup, .price-tag sup")
+            euros_el = item.select_one("span.price-tag > span, .price-tag span, .price span")
+            cents_el = item.select_one("span.price-tag > div > sup, .price-tag sup, .price sup")
             
             euros = euros_el.text.strip() if euros_el else item.text
             cents = cents_el.text.strip() if cents_el else "00"
@@ -114,23 +113,27 @@ def get_image(soup):
 
 def get_contents(soup):
     try:
-        cont = soup.select_one(".product__details, .details, #product-details")
+        cont = soup.select_one(".product__details, .details, #product-details, div.info")
         if cont:
             return cont.text.strip()
     except Exception:
         pass
     return ""
 
-def get_page_soup(url, query_params=None):
+# LOLLI-KINDEL LEHE LUGEMINE (EI JÄÄ KINNI!)
+def get_page_soup(url, element=None, params=None):
     global driver
     full_url = url
-    if query_params and "page" in query_params:
+    if params and "page" in params:
         sep = "&" if "?" in url else "?"
-        full_url = f"{url}{sep}page={query_params['page']}"
+        full_url = f"{url}{sep}page={params['page']}"
         
-    driver.get(full_url)
-    sleep(PAGE_SWITCH_SLEEP)
-    return BeautifulSoup(driver.page_source, "html.parser")
+    try:
+        driver.get(full_url)
+        sleep(PAGE_SWITCH_SLEEP)
+        return BeautifulSoup(driver.page_source, "html.parser")
+    except Exception:
+        return BeautifulSoup("", "html.parser")
 
 def insert_product_to_database(url, title, barcode, image, contents, price):
     db_util.insert_product(url, title, barcode, image, contents, price, "RIMI")
@@ -148,7 +151,7 @@ def handle_product_page(url, price):
 
 def handle_products_page(url, no_details=False):
     try:
-        soup = get_page_soup(url, params)
+        soup = get_page_soup(url, params=params)
         has_next_page = has_next_products_page(soup)
         links_with_prices = get_product_links_with_prices(soup)
 
@@ -173,7 +176,6 @@ def handle_products_page(url, no_details=False):
         if has_next_page:
             params["page"] += 1
             return True
-    
     except Exception as e:
         print(f"Viga lehel: {url} -> {e}")
     return False
