@@ -169,15 +169,12 @@ def handle_products_page(url, no_details=False):
         handle_error(e, url)
 
 def open_browser():
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    options.add_argument("--log-level=OFF")
-
-    service = Service(ChromeDriverManager().install())
-
     global driver
-    driver = webdriver.Chrome(service=service, options=options)
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(options=options)
 
 def close_browser():
     driver.quit()
