@@ -34,7 +34,13 @@ def has_next_products_page(soup):
     return soup.find("a", {"aria-label": "Next &raquo;"}) is not None
 
 def get_price(euros, cents):
-    return float(f"{euros}.{cents}")
+    try:
+        match = re.search(r'(\d+)[\.,](\d{2})', f"{euros}.{cents}")
+        if match:
+            return float(f"{match.group(1)}.{match.group(2)}")
+    except Exception:
+        pass
+    return 0.0
 
 def get_product_links_with_prices(soup):
     result = {}
